@@ -134,7 +134,7 @@ display:
     cs_pin: GPIO5
     dc_pin: GPIO14
     reset_pin: GPIO12
-    rotation: 270
+    rotation: 90
     update_interval: 10s
     lambda: |-
       // Achtergrond
@@ -168,4 +168,4 @@ display:
       
       // Instructie onderaan
       it.print(120, 105, id(font_tiny), id(color_white), TextAlign::TOP_CENTER, "M5 knop = Nieuwe prik");
-      it.print(120, 115, id(font_tiny), id(color_white), TextAlign::TOP_CENTER, "Knop onder = Annuleer huidige prik");
+      it.print(120, 115, id(font_tiny), id(color_white), TextAlign::TOP_CENTER, "Knop boven = Annuleer huidige prik");
