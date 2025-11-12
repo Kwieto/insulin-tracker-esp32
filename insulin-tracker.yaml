@@ -1,0 +1,171 @@
+substitutions:
+  devicename: m5stickc-plus2
+  upper_devicename: M5StickC PLUS2
+
+esphome:
+  name: $devicename
+  platformio_options:
+    upload_speed: 115200
+
+esp32:
+  board: m5stick-c
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  ap:
+    ssid: !secret ap_ssid
+    password: !secret ap_password
+
+captive_portal:
+
+logger:
+
+api:
+
+ota:
+  platform: esphome
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO37
+      inverted: true
+    name: ${upper_devicename} Button A
+
+  - platform: gpio
+    pin:
+      number: GPIO39
+      inverted: true
+    name: ${upper_devicename} Button B
+
+light:
+  - platform: monochromatic
+    output: builtin_led
+    name: ${upper_devicename} Led
+    id: led1
+    restore_mode: ALWAYS_OFF
+
+  - platform: monochromatic
+    output: backlight
+    name: ${upper_devicename} Backlight
+    id: display_bl
+    restore_mode: ALWAYS_ON
+
+output:
+  - platform: ledc
+    pin: 19
+    id: builtin_led
+
+  - platform: ledc
+    pin: 27
+    id: backlight
+    max_power: 50%
+
+spi:
+  clk_pin: GPIO13
+  mosi_pin: GPIO15
+
+i2c:
+  - id: bus_a
+    sda: GPIO21
+    scl: GPIO22
+    scan: true
+
+font:
+  - file: "gfonts://Roboto"
+    id: font_large
+    size: 20
+  - file: "gfonts://Roboto"
+    id: font_medium
+    size: 16
+  - file: "gfonts://Roboto"
+    id: font_small
+    size: 13
+  - file: "gfonts://Roboto"
+    id: font_tiny
+    size: 11
+
+color:
+  - id: color_black
+    red: 0%
+    green: 0%
+    blue: 0%
+  - id: color_white
+    red: 100%
+    green: 100%
+    blue: 100%
+  - id: color_green
+    red: 0%
+    green: 100%
+    blue: 0%
+  - id: color_yellow
+    red: 100%
+    green: 100%
+    blue: 0%
+  - id: color_cyan
+    red: 0%
+    green: 100%
+    blue: 100%
+  - id: color_gray
+    red: 50%
+    green: 50%
+    blue: 50%
+
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+text_sensor:
+  - platform: homeassistant
+    entity_id: input_datetime.minoes_geprikt
+    id: last_injection
+    internal: true
+    on_value:
+      then:
+        - component.update: my_display
+
+# 1.14 inch, 135*240 Colorful TFT LCD, ST7789v2
+display:
+  - platform: st7789v
+    model: TTGO TDisplay 135x240
+    id: my_display
+    cs_pin: GPIO5
+    dc_pin: GPIO14
+    reset_pin: GPIO12
+    rotation: 270
+    update_interval: 10s
+    lambda: |-
+      // Achtergrond
+      it.fill(color_black);
+
+      // Huidige tijd rechtsboven
+      auto time = id(homeassistant_time).now();
+      if (time.is_valid()) {
+        it.strftime(230, 5, id(font_tiny), id(color_gray), TextAlign::TOP_RIGHT, "%d-%m %H:%M", time);      
+      }
+      
+      // Titel
+      it.print(10, 5, id(font_large), id(color_white), TextAlign::TOP_LEFT, "Minoes Insuline");
+      it.line(10, 30, 230, 30, id(color_white));
+      
+      // Laatste prik label
+      it.print(120, 40, id(font_small), id(color_green), TextAlign::TOP_CENTER, "Laatste prik:");
+      
+      auto datetime_str = id(last_injection).state;
+      
+      // Parse datetime: 2024-11-12 15:30:00
+      if (datetime_str.length() >= 16) {
+        std::string datum = datetime_str.substr(8, 2) + "-" + datetime_str.substr(5, 2);
+        std::string tijd = datetime_str.substr(11, 5);
+        
+        it.print(120, 60, id(font_large), id(color_yellow), TextAlign::TOP_CENTER, tijd.c_str());
+        it.print(120, 85, id(font_medium), id(color_cyan), TextAlign::TOP_CENTER, datum.c_str());
+      } else {
+        it.print(120, 60, id(font_medium), id(color_yellow), TextAlign::TOP_CENTER, datetime_str.c_str());
+      }
+      
+      // Instructie onderaan
+      it.print(120, 105, id(font_tiny), id(color_white), TextAlign::TOP_CENTER, "M5 knop = Nieuwe prik");
+      it.print(120, 115, id(font_tiny), id(color_white), TextAlign::TOP_CENTER, "Knop onder = Annuleer huidige prik");
